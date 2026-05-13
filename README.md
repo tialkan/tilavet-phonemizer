@@ -1,5 +1,7 @@
 # Tilavet Phonemizer
 
+*Developed by **[Tarık İsmet ALKAN](https://avesis.aybu.edu.tr/tialkan)***
+
 **Rule-based Quranic Arabic phonemizer for the Hafs an Asim recitation.**
 
 *This project is a core component of the broader [Tilavet AI ecosystem](https://github.com/tialkan/Tilavet).*
