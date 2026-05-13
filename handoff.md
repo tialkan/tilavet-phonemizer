@@ -44,7 +44,8 @@ hizalama.
 Test komutu:
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests
+pytest tests/ -v
+ruff check .
 ```
 
 Hizli CLI denemesi:
@@ -55,17 +56,20 @@ PYTHONPATH=src python3 -m tilavet_phonemizer.cli "بِسْمِ ٱللَّهِ ٱ
 
 ## Onemli Dosyalar
 
-- `src/tilavet_phonemizer/phonemizer.py`  
-  Ana rule-based phonemizer.
+- `src/tilavet_phonemizer/phonemizer.py` & `arabic.py`  
+  Ana Python rule-based phonemizer ve sabitleri.
 
-- `src/tilavet_phonemizer/arabic.py`  
-  Arabic Unicode sabitleri, harf sembol map'i, diacritics.
+- `ts/src/phonemizer.ts` & `ts/src/arabic.ts`  
+  TypeScript portu (NPM paketi kaynak kodlari).
 
-- `tests/test_phonemizer.py`  
-  Kural bazli unit testler.
+- `tests/test_phonemizer.py` & `ts/tests/phonemizer.test.ts`  
+  Kural bazli unit testler (Python ve TS icin ayri ayri).
 
 - `tests/test_recovered_seed.py`  
   35 ayetlik seed'in deterministic kalmasini test eder.
+
+- `llms.txt`  
+  LLM'lerin/Agent'larin projeyi ve API'sini dogru anlamasi icin yonergeler.
 
 - `data/validation/recovered_seed.jsonl`  
   35 ayetlik current `candidate_v1` seti.
@@ -203,35 +207,33 @@ korunacak.
 
 ## Sıradaki En Mantikli Isler
 
-1. **Waqf variant export tasarimi**
-   - `waqf_on_pause` modu icin final hareke dusmesi, tanwin, taa marbuta,
-     madd arid lis-sukun ve pause sonrasi idgham kesilmesi kurallari.
+1. **Forced Alignment (Zaman Damgasi) Araci**
+   - Fonemleri (`tilavet-phonemizer`) akustik bir ses modeliyle (Hugging Face Wav2Vec2 / Whisper) eslestirerek kelime kelime veya harf harf zaman damgasi veren Python kütüphanesinin (`tilavet-aligner`) gelistirilmesi.
 
-2. **Cross-ayah wasl tasarimi**
-   - `أَحَدٌ ٱللَّهُ` gibi ayetler arasi nun-qutni / wasl variantlari.
+2. **Web / Mobil Gelistirici Rehberleri**
+   - TypeScript paketi (`npm install tilavet-phonemizer`) kullanilarak React Native veya Flutter ile "karaoke" tarzinda bir Kur'an teleprompter yapimini gosteren `examples/` klasorlerinin veya blog yazilarinin eklenmesi.
 
-3. **Validation status modeli**
-   - `candidate_v1`
-   - `gold_wasl_v1`
-   - ileride `gold_waqf_on_pause_v1`
-   - reviewer provenance / agreement count.
+3. **Waqf variant export tasarimi**
+   - `waqf_on_pause` modu icin final hareke dusmesi, tanwin, taa marbuta, madd arid lis-sukun ve pause sonrasi idgham kesilmesi kurallari. *(Python portuna eklendi, TS portuna ve genis capli testlere genisletilmesi)*
 
-4. **Quran-wide export**
+4. **Cross-ayah wasl tasarimi**
+   - `أَحَدٌ ٱللَّهُ` gibi ayetler arasi nun-qutni / wasl variantlarinin tum platformlara entegre edilmesi.
+
+5. **Diger Kıraatlerin Desteklenmesi (Örn: Warsh, Qalun)**
+   - Algoritmayi modulerlestirerek Hafs disindaki kural setlerinin de parametre (`riwayat="warsh"`) olarak fonemizere eklenebilmesi.
+
+6. **Quran-wide export**
    - sure/ayet/kelime/fonem offset map.
    - pause boundary metadata.
    - decoder icin trie/suffix index input.
-
-5. **CTC class listesi**
-   - `docs/phoneme-spec.md` ile birebir kilitlenmis sinif listesi.
-   - `PAUSE` ana phoneme class degil, metadata/optional gap olarak
-     degerlendirilecek.
 
 ## Calisma Kurallari
 
 - Kod degistirince test calistir:
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests
+pytest tests/ -v
+ruff check .
 ```
 
 - Validation report yeniden uretmek icin:
@@ -258,6 +260,11 @@ OK
 ## Yeni LLM Icin Kisa Talimat
 
 Bu projede amac "mukemmel dini/tecvid otoritesi" iddiasinda bulunmak degil,
+offline Quran audio alignment icin testlenebilir ve review ile iyilesen bir
+fonem sozlesmesi kurmaktir. Tartismali kararlar koda rastgele yansitilmemeli;
+once `docs/llm-review-synthesis.md`, `docs/phoneme-spec.md` ve
+`docs/waqf-pause-decision.md` kontrol edilmeli, sonra test eklenmelidir.
+ac "mukemmel dini/tecvid otoritesi" iddiasinda bulunmak degil,
 offline Quran audio alignment icin testlenebilir ve review ile iyilesen bir
 fonem sozlesmesi kurmaktir. Tartismali kararlar koda rastgele yansitilmemeli;
 once `docs/llm-review-synthesis.md`, `docs/phoneme-spec.md` ve
