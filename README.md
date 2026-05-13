@@ -2,6 +2,8 @@
 
 **Rule-based Quranic Arabic phonemizer for the Hafs an Asim recitation.**
 
+*This project is a core component of the broader [Tilavet AI ecosystem](https://github.com/tialkan/Tilavet).*
+
 Converts fully-vowelled Uthmani-script Quran text into a deterministic phoneme sequence that respects tajwid rules. Designed as a "golden label" for training acoustic speech models, aligning audio recitations to text, and building Quran-only ASR / teleprompter applications.
 
 [![Tests](https://img.shields.io/badge/tests-78%20passing-green)](.) [![Quran coverage](https://img.shields.io/badge/Quran-6236%20ayahs-blue)](.) [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
@@ -236,7 +238,7 @@ pytest tests/ -v --cov=src/tilavet_phonemizer
 
 - Râ tafhim/tarqiq as a metadata layer
 - Variant-graph output for PAUSE branches (wasl vs waqf paths)
-- Documentation in Arabic, English, Urdu, Indonesian
+- **Multilingual Support:** Documentation and usage guides will be expanded to Arabic, English, Urdu, Indonesian, Turkish, and French across all platforms (GitHub, Hugging Face, PyPI).
 - Acoustic model integration example (wav2vec2 / Whisper fine-tune)
 - Extension hooks for Shâtibî / Tayyibe rules
 

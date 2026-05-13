@@ -17,6 +17,8 @@ library_name: tilavet
 
 ## Model description
 
+*This project is a core component of the broader [Tilavet AI ecosystem](https://github.com/tialkan/Tilavet).*
+
 Tilavet Phonemizer is a **rule-based** (not neural) Quranic Arabic phonemizer for the **Hafs an Asim** recitation. It converts fully-vowelled Uthmani-script Quran text into a deterministic phoneme sequence that respects tajwid rules. Intended use cases:
 
 - Offline Quran audio alignment (CTC-based ASR systems).
