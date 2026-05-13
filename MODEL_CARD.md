@@ -101,7 +101,7 @@ MIT. Free for commercial and personal use, attribution required. The phoneme con
   title  = {Tilavet Phonemizer: Rule-based Quranic Arabic phonemizer (Hafs an Asim)},
   year   = {2026},
   version = {1.0},
-  url    = {https://github.com/tilavet/tilavet-phonemizer}
+  url    = {https://github.com/tialkan/tilavet-phonemizer}
 }
 ```
 

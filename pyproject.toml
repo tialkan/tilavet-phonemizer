@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tilavet-phonemizer"
-version = "0.1.0"
+version = "0.1.1"
 description = "Rule-based Quran phonemizer for offline audio alignment and tajwid analysis."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -36,10 +36,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tilavet/tilavet-phonemizer"
-Documentation = "https://github.com/tilavet/tilavet-phonemizer#readme"
-Repository = "https://github.com/tilavet/tilavet-phonemizer"
-Issues = "https://github.com/tilavet/tilavet-phonemizer/issues"
+Homepage = "https://github.com/tialkan/tilavet-phonemizer"
+Documentation = "https://github.com/tialkan/tilavet-phonemizer#readme"
+Repository = "https://github.com/tialkan/tilavet-phonemizer"
+Issues = "https://github.com/tialkan/tilavet-phonemizer/issues"
 
 [project.scripts]
 tilavet-phonemize = "tilavet_phonemizer.cli:main"

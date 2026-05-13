@@ -47,7 +47,7 @@ For Quranic Arabic specifically, this phoneme map needs to encode tajwid rules (
 pip install tilavet-phonemizer
 
 # From source
-git clone https://github.com/tilavet/tilavet-phonemizer
+git clone https://github.com/tialkan/tilavet-phonemizer
 cd tilavet-phonemizer
 pip install -e .
 ```
@@ -258,7 +258,7 @@ See [docs/v1-backlog.md](docs/v1-backlog.md) for the complete backlog.
 @software{tilavet_phonemizer_2026,
   title  = {Tilavet Phonemizer: Open-source Quran phonemizer for Hafs an Asim},
   year   = {2026},
-  url    = {https://github.com/tilavet/tilavet-phonemizer}
+  url    = {https://github.com/tialkan/tilavet-phonemizer}
 }
 ```
 
