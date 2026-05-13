@@ -1,9 +1,25 @@
 {
   "name": "tilavet-phonemizer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rule-based Quranic Arabic phonemizer for the Hafs an Asim recitation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tialkan/tilavet-phonemizer.git"
+  },
+  "keywords": [
+    "quran",
+    "phonemizer",
+    "tajwid",
+    "arabic",
+    "nlp",
+    "asr",
+    "hafs"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
