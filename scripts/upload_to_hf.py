@@ -48,32 +48,48 @@ def upload_to_hub(repo_id: str, create_repo: bool = True):
     # Upload files
     repo_path = Path(__file__).parent.parent
 
-    files_to_upload = [
-        "MODEL_CARD.md",
-        "README.md",
-        "LICENSE",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "docs/phoneme-spec.md",
-        "docs/waqf-pause-decision.md",
-        "data/ctc_classes.txt",
+    # HuggingFace Hub uses README.md as the model card and REQUIRES YAML
+    # frontmatter at the top of it (license, tags, language, library_name).
+    # Our MODEL_CARD.md already carries that frontmatter, so we upload it
+    # *as* README.md on the Hub. The GitHub-flavored README.md (with badges
+    # and install instructions) is uploaded under its original name as a
+    # secondary doc so the Hub repo still surfaces the developer-facing
+    # quickstart.
+    #
+    # See: https://huggingface.co/docs/hub/model-cards#model-card-metadata
+    files_to_upload: list[tuple[str, str]] = [
+        ("MODEL_CARD.md", "README.md"),          # primary model card on HF
+        ("README.md", "GITHUB_README.md"),       # GitHub README kept for reference
+        ("LICENSE", "LICENSE"),
+        ("CHANGELOG.md", "CHANGELOG.md"),
+        ("CONTRIBUTING.md", "CONTRIBUTING.md"),
+        ("docs/phoneme-spec.md", "docs/phoneme-spec.md"),
+        ("docs/waqf-pause-decision.md", "docs/waqf-pause-decision.md"),
+        ("docs/aligner-mvp.md", "docs/aligner-mvp.md"),
+        ("data/ctc_classes.txt", "data/ctc_classes.txt"),
+        ("data/ctc_classes.json", "data/ctc_classes.json"),
     ]
 
-    for file_path in files_to_upload:
-        full_path = repo_path / file_path
+    for local_path, repo_relpath in files_to_upload:
+        full_path = repo_path / local_path
         if full_path.exists():
             try:
                 api.upload_file(
                     path_or_fileobj=str(full_path),
-                    path_in_repo=file_path,
+                    path_in_repo=repo_relpath,
                     repo_id=repo_id,
                     repo_type="model",
                 )
-                print(f"Uploaded: {file_path}")
+                label = (
+                    f"{local_path} → {repo_relpath}"
+                    if local_path != repo_relpath
+                    else local_path
+                )
+                print(f"Uploaded: {label}")
             except Exception as e:
-                print(f"Error uploading {file_path}: {e}")
+                print(f"Error uploading {local_path}: {e}")
         else:
-            print(f"File not found: {file_path}")
+            print(f"File not found: {local_path}")
 
     # Upload source code
     src_path = repo_path / "src"

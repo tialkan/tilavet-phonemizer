@@ -1,5 +1,9 @@
 ---
 license: mit
+library_name: tilavet
+pipeline_tag: text2text-generation
+language:
+- ar
 tags:
 - quran
 - phonemizer
@@ -7,11 +11,26 @@ tags:
 - arabic
 - phonetics
 - speech-recognition
+- forced-alignment
 - audio-alignment
-language:
-- ar
-library_name: tilavet
+- ctc
+- rule-based
+inference: false
+widget:
+- text: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+  example_title: Basmala
+- text: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ"
+  example_title: Fatiha 2
+- text: "قُلْ هُوَ ٱللَّهُ أَحَدٌ"
+  example_title: Ikhlas 1
 ---
+
+<!--
+This file is uploaded as README.md to the Hugging Face Hub repository.
+The YAML frontmatter above conforms to:
+  https://huggingface.co/docs/hub/model-cards#model-card-metadata
+The GitHub-flavored README is uploaded under GITHUB_README.md.
+-->
 
 # Tilavet Phonemizer v0.2.0
 
