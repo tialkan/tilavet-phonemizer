@@ -13,7 +13,7 @@ language:
 library_name: tilavet
 ---
 
-# Tilavet Phonemizer v1.0
+# Tilavet Phonemizer v0.2.0
 
 ## Model description
 
@@ -28,7 +28,7 @@ Tilavet Phonemizer is a **rule-based** (not neural) Quranic Arabic phonemizer fo
 
 ## Method
 
-Deterministic Python implementation walking the Arabic character stream, clustering letters + diacritics, and emitting phonemes per Hafs tajwid rules. No machine learning. ~1000 LOC, 78 unit tests.
+Deterministic Python implementation walking the Arabic character stream, clustering letters + diacritics, and emitting phonemes per Hafs tajwid rules. No machine learning. ~1000 LOC, 108 unit tests (93% line coverage).
 
 Tajwid coverage:
 
@@ -67,7 +67,7 @@ Complete list in `data/ctc_classes.json`.
 
 ## Validation
 
-- **78 unit tests** covering individual tajwid rules.
+- **108 unit tests** covering individual tajwid rules, public API surface, and CLI flags.
 - **35-ayah gold seed** with multi-reviewer (GPT-4 + Claude + Gemini + 5 hafiz audits) verdicts.
 - **Full-Quran sanity scan** (6236 ayet): 0 crashes, 0 empty word outputs, 0 four-consonant runs.
 - All bugs identified by 5 independent hafız reviewers in the V1 audit have been fixed and re-verified.

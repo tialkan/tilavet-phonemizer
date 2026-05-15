@@ -29,7 +29,8 @@ Output format:
 
 Usage:
   python3 scripts/generate_phoneme_index.py
-  python3 scripts/generate_phoneme_index.py --enriched data/validation/recovered_seed_with_validation.jsonl
+  python3 scripts/generate_phoneme_index.py \
+    --enriched data/validation/recovered_seed_with_validation.jsonl
   python3 scripts/generate_phoneme_index.py --output data/phoneme_index.json
 """
 

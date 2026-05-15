@@ -108,9 +108,17 @@ def upload_to_hub(repo_id: str, create_repo: bool = True):
 
 def main():
     parser = argparse.ArgumentParser(description="Upload Tilavet Phonemizer to Hugging Face")
-    parser.add_argument("--repo-id", required=True, help="Hugging Face repository ID (e.g., username/tilavet-phonemizer)")
+    parser.add_argument(
+        "--repo-id",
+        required=True,
+        help="Hugging Face repository ID (e.g., username/tilavet-phonemizer)",
+    )
     parser.add_argument("--no-build", action="store_true", help="Skip building the package")
-    parser.add_argument("--no-create-repo", action="store_true", help="Skip creating the repository")
+    parser.add_argument(
+        "--no-create-repo",
+        action="store_true",
+        help="Skip creating the repository",
+    )
 
     args = parser.parse_args()
 

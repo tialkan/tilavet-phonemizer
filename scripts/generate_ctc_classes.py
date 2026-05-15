@@ -59,7 +59,7 @@ def parse_phoneme_spec(spec_path: Path) -> dict[str, list[str]]:
 
 def generate_ctc_classes(classes: dict[str, list[str]]) -> list[str]:
     """Generate complete CTC class list.
-    
+
     Note: PAUSE is NOT included as a CTC class per phoneme-spec.md:
     "PAUSE ana CTC fonem sinif listesine zorunlu fonem olarak dahil edilmez."
     """

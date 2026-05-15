@@ -56,7 +56,10 @@ class CoverageBranchTests(unittest.TestCase):
         clusters = self.phonemizer._cluster("ٱلْ")
         out = []
         rules = []
-        self.assertEqual(self.phonemizer._emit_article(clusters, 0, _State(True), "ٱلْ", out, rules), 2)
+        self.assertEqual(
+            self.phonemizer._emit_article(clusters, 0, _State(True), "ٱلْ", out, rules),
+            2,
+        )
         self.assertEqual(out, [])
         self.assertEqual(self.phonemizer.phonemize("ٱلَّذِينَ").text, "' a l l a dh ii n a")
 
@@ -71,8 +74,18 @@ class CoverageBranchTests(unittest.TestCase):
         self.assertEqual(self.phonemizer.phonemize("هُم").text, "h u m")
         self.assertEqual(self.phonemizer.phonemize("قُولُوا").text, "q uu l uu")
         self.assertEqual(self.phonemizer.phonemize("قِيلَ").text, "q ii l a")
-        self.assertTrue(self.phonemizer._is_long_vowel_carrier([ArabicChar("ق", (DAMMA,)), ArabicChar("و", ())], 1))
-        self.assertTrue(self.phonemizer._is_long_vowel_carrier([ArabicChar("ق", (KASRA,)), ArabicChar("ي", ())], 1))
+        self.assertTrue(
+            self.phonemizer._is_long_vowel_carrier(
+                [ArabicChar("ق", (DAMMA,)), ArabicChar("و", ())],
+                1,
+            )
+        )
+        self.assertTrue(
+            self.phonemizer._is_long_vowel_carrier(
+                [ArabicChar("ق", (KASRA,)), ArabicChar("ي", ())],
+                1,
+            )
+        )
 
     def test_small_alef_madd_and_silah_ii_madd(self):
         out = []
@@ -191,12 +204,24 @@ class CoverageBranchTests(unittest.TestCase):
     def test_coalesce_leading_geminate_noop_and_shift(self):
         word_symbols = ["m"]
         word_rules = []
-        self.phonemizer._coalesce_leading_geminate_after(["m_g"], word_symbols, word_rules, "m_g", "m")
+        self.phonemizer._coalesce_leading_geminate_after(
+            ["m_g"],
+            word_symbols,
+            word_rules,
+            "m_g",
+            "m",
+        )
         self.assertEqual(word_symbols, ["m"])
 
         word_symbols = ["m", "m", "a"]
         word_rules = [RuleHit(0, "m", "shadda", "x"), RuleHit(1, "m", "shadda", "x")]
-        self.phonemizer._coalesce_leading_geminate_after(["m_g"], word_symbols, word_rules, "m_g", "m")
+        self.phonemizer._coalesce_leading_geminate_after(
+            ["m_g"],
+            word_symbols,
+            word_rules,
+            "m_g",
+            "m",
+        )
         self.assertEqual(word_symbols, ["m", "a"])
 
     def test_next_consonant_and_empty_waqf_paths(self):
@@ -238,8 +263,22 @@ class CoverageBranchTests(unittest.TestCase):
         self.assertEqual(symbols, ["n"])
 
     def test_pending_index_break_paths(self):
-        self.assertIsNone(self.phonemizer._pending_noon_index_from_rules([RuleHit(0, "n", "tanwin_n", "x")], ["n"], 1, 1))
-        self.assertIsNone(self.phonemizer._pending_mim_index_from_rules([RuleHit(0, "m", "mim_sakin", "x")], ["m"], 1, 1))
+        self.assertIsNone(
+            self.phonemizer._pending_noon_index_from_rules(
+                [RuleHit(0, "n", "tanwin_n", "x")],
+                ["n"],
+                1,
+                1,
+            )
+        )
+        self.assertIsNone(
+            self.phonemizer._pending_mim_index_from_rules(
+                [RuleHit(0, "m", "mim_sakin", "x")],
+                ["m"],
+                1,
+                1,
+            )
+        )
 
 
 class CliTests(unittest.TestCase):

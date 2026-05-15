@@ -11,7 +11,8 @@ the final symbol (e.g. هُدًى ۝). Mid-word madd before waqf-final consonant
 (e.g. الرحيم, قدير) keeps tabii length. This is tracked in v1-backlog.md.
 
 Usage:
-  python3 scripts/populate_waqf_gold.py --enriched data/validation/recovered_seed_with_validation.jsonl
+  python3 scripts/populate_waqf_gold.py \
+    --enriched data/validation/recovered_seed_with_validation.jsonl
   python3 scripts/populate_waqf_gold.py --enriched ... --dry-run
   python3 scripts/populate_waqf_gold.py --enriched ... --ayah 1:1 2:2
 """

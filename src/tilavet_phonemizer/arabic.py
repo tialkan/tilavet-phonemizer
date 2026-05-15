@@ -43,7 +43,8 @@ KASRA = "\u0650"
 SHADDA = "\u0651"
 SUKUN = "\u0652"
 # Small low kasra (U+06EA) \u2014 used in rare Quranic orthography (e.g.
-# \u0645\u064e\u062c\u0652\u0631\u06ea\u0649\u0670\u0647\u064e\u0627). In Hafs reading it functions as a short kasra (i).
+# \u0645\u064e\u062c\u0652\u0631\u06ea\u0649\u0670\u0647\u064e\u0627).
+# In Hafs reading it functions as a short kasra (i).
 SMALL_KASRA = "\u06ea"
 MADDAH = "\u0653"
 HAMZA_ABOVE = "\u0654"

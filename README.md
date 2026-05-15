@@ -8,7 +8,7 @@
 
 Converts fully-vowelled Uthmani-script Quran text into a deterministic phoneme sequence that respects tajwid rules. Designed as a "golden label" for training acoustic speech models, aligning audio recitations to text, and building Quran-only ASR / teleprompter applications.
 
-[![Tests](https://img.shields.io/badge/tests-78%20passing-green)](.) [![Quran coverage](https://img.shields.io/badge/Quran-6236%20ayahs-blue)](.) [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-108%20passing-green)](.) [![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](.) [![Quran coverage](https://img.shields.io/badge/Quran-6236%20ayahs-blue)](.) [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 ---
 
@@ -65,6 +65,19 @@ Requires Python 3.9+. No runtime dependencies.
 ```bash
 tilavet-phonemize "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
 # → b i s m i l l aa h i r r a H m aa n i r r a H ii m i
+
+tilavet-phonemize --json "بِسْمِ ٱللَّهِ"
+# → {"symbols":["b","i",...], "text":"b i s m i l l aa h i", "words":[...]}
+
+tilavet-phonemize --rules-only "بِسْمِ"     # print only rule trace
+
+tilavet-phonemize --waqf "ٱلرَّحِيمِ ۝"
+# → ' a r r a H ii6 m PAUSE
+
+tilavet-phonemize --file ayahs.txt          # one ayah per line
+echo "هُوَ" | tilavet-phonemize -            # read from stdin
+
+tilavet-phonemize --print-inventory          # canonical phoneme list
 ```
 
 ### Python API
@@ -92,7 +105,25 @@ print(p_waqf.phonemize("ٱلرَّحِيمِ ۝").text)
 
 # Cross-ayah connected (nun qutni)
 p_cross = Phonemizer(PhonemizerConfig(cross_ayah_wasl=True))
+
+# Batch processing (e.g. building a dataset)
+results = p.phonemize_many(["بِسْمِ", "ٱللَّهِ", "هُوَ"])
+
+# JSON-serializable raw/debug output for web backend or inspection
+ayah = p.phonemize("بِسْمِ ٱللَّهِ").to_dict(include_rules=False)
+# {"symbols": [...], "text": "...", "words": [{"token":..., "start":..., "end":...}, ...]}
+
+# CTC/aligner target: elisions removed, PAUSE emitted as metadata
+target = p.phonemize("رَيْبَ ۛ فِيهِ").to_alignment_dict()
+# {"symbols": ["r","a","y","b","a","f","ii","h","i"], "pauses": [...], "words": [...]}
+
+# Phoneme inventory for an acoustic model (49 entries incl. PAUSE;
+# prepend the CTC blank for the persisted 50-class file)
+Phonemizer.phoneme_inventory(include_metadata=True)
+# ["'", "b", "t", ..., "PAUSE"]
 ```
+
+The first downstream aligner contract is sketched in [docs/aligner-mvp.md](docs/aligner-mvp.md).
 
 ### Inspecting tajwid rules per phoneme
 
@@ -214,9 +245,8 @@ CTC class file (`data/ctc_classes.json`) lists the 50 phonemes (incl. blank and 
 ## Testing
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests
-# Ran 78 tests in 0.012s
-# OK
+PYTHONPATH=src python3 -m pytest tests/
+# 108 passed, 35 subtests passed in ~0.07s
 ```
 
 For development:

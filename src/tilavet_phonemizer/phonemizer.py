@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from .arabic import (
     ALEF,
@@ -44,27 +44,82 @@ from .arabic import (
 
 @dataclass(frozen=True)
 class ArabicChar:
+    """A single Arabic letter base plus its attached diacritic marks.
+
+    `marks` preserves the source order of the diacritics. This matters for the
+    hamza-on-carrier paths where the consonant's harakah and the hamza's
+    harakah are emitted separately.
+    """
+
     base: str
     marks: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class RuleHit:
+    """A single rule firing during phonemization.
+
+    Attributes:
+        symbol_index: index into `PhonemizationResult.symbols` for the emission
+            this rule produced (or 0-length entries like a silent shamsiyya elide).
+        symbol: the phoneme symbol emitted (empty string for silent rules).
+        rule: a short stable rule identifier — see docs/phoneme-spec.md for the
+            canonical inventory. Stable across versions; downstream consumers
+            (aligners, debuggers) may key on these.
+        source: the source word/token that triggered this rule (best-effort,
+            useful for surfacing context in dev tools).
+    """
+
     symbol_index: int
     symbol: str
     rule: str
     source: str
 
+    def to_dict(self) -> dict[str, Any]:
+        """Plain dict representation, JSON-serializable."""
+        return {
+            "symbol_index": self.symbol_index,
+            "symbol": self.symbol,
+            "rule": self.rule,
+            "source": self.source,
+        }
+
 
 @dataclass(frozen=True)
 class WordSpan:
+    """Phoneme-index span for one source token (word).
+
+    `start` is inclusive, `end` is exclusive — i.e. the symbols belonging to
+    this word are `symbols[start:end]`. Pause markers are NOT inside any word
+    span; they sit between word spans in the symbol stream.
+    """
+
     token: str
     start: int
     end: int
 
+    def to_dict(self) -> dict[str, Any]:
+        return {"token": self.token, "start": self.start, "end": self.end}
+
 
 @dataclass
 class PhonemizationResult:
+    """Result of phonemizing a single string of Quran text.
+
+    The three lists are aligned to each other via `symbol_index`:
+        symbols[i]    — phoneme at position i (may be "" if the rule silently
+                        elided a previously-emitted phoneme; consumers should
+                        skip empty strings when rendering audio targets).
+        words[k]      — `start..end` slice of symbols belonging to token k.
+        rules         — every rule firing recorded during phonemization (not
+                        guaranteed to be 1:1 with symbols; a single symbol can
+                        be touched by multiple rules).
+
+    Use `.text` for the canonical space-joined string (empty entries dropped).
+    Use `.to_dict()` to obtain a JSON-serializable representation suitable for
+    passing into the downstream forced-alignment pipeline.
+    """
+
     symbols: list[str]
     rules: list[RuleHit] = field(default_factory=list)
     words: list[WordSpan] = field(default_factory=list)
@@ -73,9 +128,159 @@ class PhonemizationResult:
     def text(self) -> str:
         return " ".join(symbol for symbol in self.symbols if symbol)
 
+    @property
+    def clean_symbols(self) -> list[str]:
+        """Symbols with empty (silently-elided) entries removed.
+
+        Useful when feeding the sequence into a CTC decoder or forced aligner
+        where empty strings are not meaningful targets.
+        """
+        return [s for s in self.symbols if s]
+
+    def alignment_symbols(self, include_pause: bool = False) -> list[str]:
+        """CTC/aligner target symbols with silent elisions removed.
+
+        PAUSE is metadata in the V1 contract, so it is excluded by default.
+        Set `include_pause=True` if a downstream experiment explicitly models
+        pause markers as target tokens.
+        """
+        return [
+            symbol
+            for symbol in self.symbols
+            if symbol and (include_pause or symbol != "PAUSE")
+        ]
+
+    def alignment_words(self, include_pause: bool = False) -> list[WordSpan]:
+        """Word spans remapped onto `alignment_symbols()`.
+
+        Raw `words` spans index into `symbols`, which may include silent
+        elisions and PAUSE markers. Aligner word spans need to index into the
+        actual target sequence instead.
+        """
+        prefix_counts = self._alignment_prefix_counts(include_pause)
+        return [
+            WordSpan(
+                token=word.token,
+                start=prefix_counts[word.start],
+                end=prefix_counts[word.end],
+            )
+            for word in self.words
+        ]
+
+    def pause_markers(self, include_pause: bool = False) -> list[dict[str, Any]]:
+        """Return PAUSE positions as metadata.
+
+        `target_index` is the insertion point in `alignment_symbols()`.
+        """
+        prefix_counts = self._alignment_prefix_counts(include_pause)
+        return [
+            {"raw_index": index, "target_index": prefix_counts[index], "symbol": symbol}
+            for index, symbol in enumerate(self.symbols)
+            if symbol == "PAUSE"
+        ]
+
+    def word_symbols(self, word_index: int) -> list[str]:
+        """Return the raw symbols slice for the k-th word (including empties)."""
+        span = self.words[word_index]
+        return list(self.symbols[span.start : span.end])
+
+    def to_dict(self, include_rules: bool = True) -> dict[str, Any]:
+        """JSON-serializable dict representation of the *raw* result.
+
+        Preserves the exact symbol stream emitted by phonemize(), including
+        empty (silently-elided) entries and `PAUSE` markers. Useful for
+        debugging and round-tripping the full rule trace.
+
+        For the alignment-target contract consumed by `tilavet-aligner`, use
+        `to_alignment_dict()` instead.
+
+        Set `include_rules=False` to omit the (potentially large) rule trace.
+        """
+        data: dict[str, Any] = {
+            "symbols": list(self.symbols),
+            "text": self.text,
+            "words": [w.to_dict() for w in self.words],
+        }
+        if include_rules:
+            data["rules"] = [r.to_dict() for r in self.rules]
+        return data
+
+    def to_alignment_dict(
+        self,
+        include_rules: bool = False,
+        include_pause: bool = False,
+    ) -> dict[str, Any]:
+        """Produce the alignment-target payload consumed by `tilavet-aligner`.
+
+        Differences from `to_dict()`:
+
+        - **Empty entries** (the silent slots left by `idgham_no_ghunna`) are
+          dropped so the resulting ``symbols`` list is a valid CTC target.
+        - **PAUSE markers** are moved out of the symbol stream into a
+          ``pauses`` metadata array by default. Each pause carries both
+          ``raw_index`` (position in ``self.symbols``) and ``target_index``
+          (insertion point in the cleaned target stream).
+        - **Word spans** are remapped to indices in the cleaned target so
+          downstream aligners can index directly into the symbol sequence they
+          will feed into Viterbi.
+
+        Args:
+            include_rules: include the raw rule trace. Rule indices remain
+                relative to the *raw* symbol stream — ``rule_index_base`` is
+                set to ``"raw_symbols"`` to make this explicit so consumers can
+                remap them through ``_alignment_prefix_counts`` if needed.
+            include_pause: emit ``PAUSE`` inline as a target symbol in addition
+                to listing it in ``pauses``. Default False — PAUSE is metadata,
+                not a CTC class (see docs/waqf-pause-decision.md).
+
+        Returns:
+            A dict with keys ``symbols``, ``text``, ``words``, ``pauses``,
+            and optionally ``rules`` + ``rule_index_base``.
+        """
+        symbols = self.alignment_symbols(include_pause=include_pause)
+        data: dict[str, Any] = {
+            "symbols": symbols,
+            "text": " ".join(symbols),
+            "words": [
+                w.to_dict()
+                for w in self.alignment_words(include_pause=include_pause)
+            ],
+            "pauses": self.pause_markers(include_pause=include_pause),
+        }
+        if include_rules:
+            data["rules"] = [r.to_dict() for r in self.rules]
+            data["rule_index_base"] = "raw_symbols"
+        return data
+
+    def _alignment_prefix_counts(self, include_pause: bool) -> list[int]:
+        counts = [0]
+        for symbol in self.symbols:
+            is_target = bool(symbol) and (include_pause or symbol != "PAUSE")
+            counts.append(counts[-1] + int(is_target))
+        return counts
+
 
 @dataclass
 class PhonemizerConfig:
+    """Configuration knobs for the phonemizer.
+
+    Attributes:
+        start_of_utterance: whether the text begins an utterance (default True).
+            When False, an initial hamzat wasl is dropped.
+        wasl: whether to use wasl (continuous) reading rules. Default True.
+            When False, taa marbuta becomes `h` instead of `t` at word end.
+        emit_pause: whether to emit `PAUSE` symbols at mushaf stop marks.
+            Default True. The PAUSE symbol is metadata — it does not by itself
+            transform surrounding phonemes (see waqf_on_pause).
+        waqf_on_pause: whether mushaf stop marks trigger full waqf phonetic
+            transformations on the preceding word: final harakah drop, tanwin
+            drop, taa marbuta t→h, sakin qalqalah, and madd arıd lis-sukun.
+            Default False (PAUSE is pure metadata in V1 seed).
+        cross_ayah_wasl: whether to read across ayah boundaries (continuous
+            recitation). When True, PAUSE markers are suppressed and cross-word
+            assimilation continues across them. Default False.
+    """
+
     start_of_utterance: bool = True
     wasl: bool = True
     emit_pause: bool = True
@@ -93,7 +298,15 @@ class _State:
 
 
 class Phonemizer:
-    """Rule-based V1 seed phonemizer for Hafs-style Quran text."""
+    """Rule-based V1 seed phonemizer for Hafs-style Quran text.
+
+    Stateless: a single instance can be reused across many `phonemize()` calls
+    safely from a single thread. Construction is cheap; cache one per process.
+
+    The output is deterministic for a given (config, input) pair. Two
+    invocations on the same input must produce byte-identical `symbols` —
+    this is what the recovered-seed test pins.
+    """
 
     _word_re = re.compile(r"\s+")
     _izhar = {"'", "h", "3", "H", "gh", "kh"}
@@ -101,10 +314,70 @@ class Phonemizer:
     _idgham_no_ghunna = {"l", "r", "L"}
     _ikhfa = {"t", "th", "j", "d", "dh", "z", "s", "sh", "S", "D", "T", "Z", "f", "q", "k"}
 
+    # Canonical V1 phoneme inventory, in a stable order suitable for emitting
+    # the CTC class list. Kept in sync with docs/phoneme-spec.md. The blank
+    # symbol (index 0 in CTC) is the consumer's concern; this list omits it.
+    _CONSONANTS: tuple[str, ...] = (
+        "'", "b", "t", "th", "j", "H", "kh", "d", "dh",
+        "r", "z", "s", "sh", "S", "D", "T", "Z", "3",
+        "gh", "f", "q", "k", "l", "L", "m", "n", "h",
+        "w", "y",
+    )
+    _VOWELS: tuple[str, ...] = (
+        "a", "i", "u",
+        "aa", "ii", "uu",
+        "aa4", "ii4", "uu4",
+        "aa6", "ii6", "uu6",
+    )
+    _VARIANTS: tuple[str, ...] = (
+        "n_g", "m_g",
+        "q_qal", "T_qal", "b_qal", "j_qal", "d_qal",
+    )
+    _METADATA: tuple[str, ...] = ("PAUSE",)
+
     def __init__(self, config: Optional[PhonemizerConfig] = None) -> None:
         self.config = config or PhonemizerConfig()
 
+    @classmethod
+    def phoneme_inventory(cls, include_metadata: bool = False) -> list[str]:
+        """Return the canonical V1 phoneme inventory in stable order.
+
+        Useful for generating a CTC class list, vocabulary file, or
+        alignment-target symbol set. Does not include the CTC blank symbol
+        (consumers prepend their own blank at index 0).
+
+        Args:
+            include_metadata: include `PAUSE` (mushaf stop marker). Default
+                False, matching the V1 decision that PAUSE is metadata and
+                should not be a hard CTC class.
+        """
+        inventory = list(cls._CONSONANTS + cls._VOWELS + cls._VARIANTS)
+        if include_metadata:
+            inventory.extend(cls._METADATA)
+        return inventory
+
+    def phonemize_many(self, texts: Iterable[str]) -> list[PhonemizationResult]:
+        """Phonemize an iterable of inputs and return results in order.
+
+        Convenience for batch validation, dataset generation, and aligner
+        warm-up. Identical to calling `phonemize` in a loop, but communicates
+        intent.
+        """
+        return [self.phonemize(text) for text in texts]
+
     def phonemize(self, text: str) -> PhonemizationResult:
+        """Convert a fully-vowelled Uthmani-script Quran string to phonemes.
+
+        Args:
+            text: Arabic input. May contain mushaf stop markers (ۖ ۚ ۛ ۗ ۝),
+                tatweel, BOM, and other ignorable codepoints — all are stripped
+                or routed appropriately. Empty / whitespace-only input returns
+                an empty result.
+
+        Returns:
+            A `PhonemizationResult` carrying the phoneme sequence, the source
+            word-to-phoneme offsets, and the rule trace.
+        """
         state = _State(at_utterance_start=self.config.start_of_utterance)
         symbols: list[str] = []
         rules: list[RuleHit] = []
@@ -683,7 +956,14 @@ class Phonemizer:
                 self._emit(out, rules, "'", "hamza", token)
                 self._emit(out, rules, madd_sym, madd_rule, token)
             else:
-                self._upgrade_previous_vowel(out, rules, madd_sym, madd_rule, token, drop_preceding_hamza=True)
+                self._upgrade_previous_vowel(
+                    out,
+                    rules,
+                    madd_sym,
+                    madd_rule,
+                    token,
+                    drop_preceding_hamza=True,
+                )
 
             # In the madd-i farq case, delegate the silent article lam (and the
             # potential Allah-form that follows it) to the bare-article handler.
@@ -927,12 +1207,24 @@ class Phonemizer:
                     hamza_tanwin = m
 
         # If only one mark and it is SUKUN, treat hamza as sakin (no pre-vowel).
-        if seen_first and consonant_harakat == SUKUN and hamza_harakat is None and not hamza_sakin and hamza_tanwin is None:
+        if (
+            seen_first
+            and consonant_harakat == SUKUN
+            and hamza_harakat is None
+            and not hamza_sakin
+            and hamza_tanwin is None
+        ):
             consonant_harakat = None
             hamza_sakin = True
         # If the consonant carries a vowel/tanwin and the hamza has nothing,
         # treat that mark as the hamza's (e.g. أَ standalone: hamza-fatha).
-        if seen_first and hamza_harakat is None and not hamza_sakin and hamza_tanwin is None and consonant_harakat in (FATHA, KASRA, DAMMA):
+        if (
+            seen_first
+            and hamza_harakat is None
+            and not hamza_sakin
+            and hamza_tanwin is None
+            and consonant_harakat in (FATHA, KASRA, DAMMA)
+        ):
             hamza_harakat = consonant_harakat
             consonant_harakat = None
 
@@ -1150,7 +1442,9 @@ class Phonemizer:
                 # ءَآ pattern: hemze is a carrier, remove the spurious ' symbol
                 if drop_preceding_hamza and index > 0 and out[index - 1] == "'":
                     out.pop(index - 1)
-                    rules_to_drop = [r for r in rules if r.symbol_index == index - 1 and r.symbol == "'"]
+                    rules_to_drop = [
+                        r for r in rules if r.symbol_index == index - 1 and r.symbol == "'"
+                    ]
                     for r in rules_to_drop:
                         rules.remove(r)
                 return
@@ -1372,7 +1666,11 @@ class Phonemizer:
 
         # 1. Remove tanwin (vowel + n at word end)
         last_idx = len(word_symbols) - 1
-        if last_idx >= 1 and word_symbols[last_idx] == "n" and word_symbols[last_idx - 1] in {"a", "i", "u"}:
+        if (
+            last_idx >= 1
+            and word_symbols[last_idx] == "n"
+            and word_symbols[last_idx - 1] in {"a", "i", "u"}
+        ):
             word_symbols[last_idx] = ""
             word_symbols[last_idx - 1] = ""
 
